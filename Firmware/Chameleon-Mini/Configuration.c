@@ -14,6 +14,8 @@
 /* Map IDs to text */
 static const MapEntryType PROGMEM ConfigurationMap[] = {
     { .Id = CONFIG_NONE, 			.Text = "CLOSED" },
+    { .Id = CONFIG_FM11RF005SH,     .Text = "FM11RF005SH" },
+    { .Id = CONFIG_JCOP,     .Text = "JCOP" },
 #ifdef CONFIG_MF_ULTRALIGHT_SUPPORT
     { .Id = CONFIG_MF_ULTRALIGHT, 	.Text = "MF_ULTRALIGHT" },
     { .Id = CONFIG_MF_ULTRALIGHT_EV1_80B,   .Text = "MF_ULTRALIGHT_EV1_80B" },
@@ -70,6 +72,34 @@ static const PROGMEM ConfigurationType ConfigurationTable[] = {
         .UidSize = MIFARE_CLASSIC_UID_SIZE,
         .MemorySize = MIFARE_CLASSIC_1K_MEM_SIZE,
         .ReadOnly = true
+    },
+    [CONFIG_FM11RF005SH] = {
+        .CodecInitFunc = ISO14443ACodecInit,
+        .CodecTaskFunc = ISO14443ACodecTask,
+        .ApplicationInitFunc = FM11RF005SHAppInit,
+        .ApplicationResetFunc = MifareClassicAppReset,
+        .ApplicationTaskFunc = MifareClassicAppTask,
+        .ApplicationTickFunc = ApplicationTickDummy,
+        .ApplicationProcessFunc = FM11RF005SHAppProcess,
+        .ApplicationGetUidFunc = MifareClassicGetUid,
+        .ApplicationSetUidFunc = MifareClassicSetUid,
+        .UidSize = MIFARE_CLASSIC_UID_SIZE,
+        .MemorySize = MIFARE_CLASSIC_1K_MEM_SIZE,
+        .ReadOnly = false
+    },
+    [CONFIG_JCOP] = {
+        .CodecInitFunc = ISO14443ACodecInit,
+        .CodecTaskFunc = ISO14443ACodecTask,
+        .ApplicationInitFunc = JCOPAppInit,
+        .ApplicationResetFunc = MifareClassicAppReset,
+        .ApplicationTaskFunc = MifareClassicAppTask,
+        .ApplicationTickFunc = ApplicationTickDummy,
+        .ApplicationProcessFunc = JCOPAppProcess,
+        .ApplicationGetUidFunc = MifareClassicGetUid,
+        .ApplicationSetUidFunc = MifareClassicSetUid,
+        .UidSize = MIFARE_CLASSIC_UID_SIZE,
+        .MemorySize = MIFARE_CLASSIC_1K_MEM_SIZE,
+        .ReadOnly = false
     },
 #ifdef CONFIG_MF_ULTRALIGHT_SUPPORT
 [CONFIG_MF_ULTRALIGHT] = {

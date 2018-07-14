@@ -125,128 +125,6 @@ C1 C2 C3 	read 	write 	increment 	decrement,
 #define KEY_A 0
 #define KEY_B 1
 
-/* Decoding table for Access conditions of a data block */
-static const uint8_t abBlockAccessConditions[8][2] =
-{
-    /*C1C2C3 */
-    /* 0 0 0 R:key A|B W: key A|B I:key A|B D:key A|B 	transport configuration */
-    {
-        /* Access with Key A */
-        ACC_BLOCK_READ | ACC_BLOCK_WRITE | ACC_BLOCK_INCREMENT | ACC_BLOCK_DECREMENT,
-        /* Access with Key B */
-        ACC_BLOCK_READ | ACC_BLOCK_WRITE | ACC_BLOCK_INCREMENT | ACC_BLOCK_DECREMENT
-    },
-    /* 1 0 0 R:key A|B W:key B I:never D:never 	read/write block */
-    {
-        /* Access with Key A */
-        ACC_BLOCK_READ,
-        /* Access with Key B */
-        ACC_BLOCK_READ | ACC_BLOCK_WRITE
-    },
-    /* 0 1 0 R:key A|B W:never I:never D:never 	read/write block */
-    {
-        /* Access with Key A */
-        ACC_BLOCK_READ,
-        /* Access with Key B */
-        ACC_BLOCK_READ
-    },
-    /* 1 1 0 R:key A|B W:key B I:key B D:key A|B 	value block */
-    {
-        /* Access with Key A */
-        ACC_BLOCK_READ  |  ACC_BLOCK_DECREMENT,
-        /* Access with Key B */
-        ACC_BLOCK_READ | ACC_BLOCK_WRITE | ACC_BLOCK_INCREMENT | ACC_BLOCK_DECREMENT
-    },
-    /* 0 0 1 R:key A|B W:never I:never D:key A|B 	value block */
-    {
-        /* Access with Key A */
-        ACC_BLOCK_READ  |  ACC_BLOCK_DECREMENT,
-        /* Access with Key B */
-        ACC_BLOCK_READ  |  ACC_BLOCK_DECREMENT
-    },
-    /* 1 0 1 R:key B W:never I:never D:never 	read/write block */
-    {
-        /* Access with Key A */
-        0,
-        /* Access with Key B */
-        ACC_BLOCK_READ  
-    },
-    /* 0 1 1 R:key B W:key B I:never D:never	read/write block */
-    {
-        /* Access with Key A */
-        0,
-        /* Access with Key B */
-        ACC_BLOCK_READ | ACC_BLOCK_WRITE 
-    },
-    /* 1 1 1 R:never W:never I:never D:never	read/write block */
-    {
-        /* Access with Key A */
-        0,
-        /* Access with Key B */
-        0
-    }
-
-};
-/* Decoding table for Access conditions of the sector trailor */
-static const uint8_t abTrailorAccessConditions[8][2] =
-{
-    /* 0  0  0 RdKA:never WrKA:key A  RdAcc:key A WrAcc:never  RdKB:key A WrKB:key A  	Key B may be read[1] */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_WRITE_KEYA | ACC_TRAILOR_READ_ACC | ACC_TRAILOR_WRITE_ACC | ACC_TRAILOR_READ_KEYB | ACC_TRAILOR_WRITE_KEYB,
-        /* Access with Key B */
-        0
-    },
-    /* 1  0  0 RdKA:never WrKA:key B  RdAcc:keyA|B WrAcc:never RdKB:never WrKB:key B */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC,
-        /* Access with Key B */
-        ACC_TRAILOR_WRITE_KEYA | ACC_TRAILOR_READ_ACC |  ACC_TRAILOR_WRITE_KEYB
-    },
-    /* 0  1  0 RdKA:never WrKA:never  RdAcc:key A WrAcc:never  RdKB:key A WrKB:never  Key B may be read[1] */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC | ACC_TRAILOR_READ_KEYB,
-        /* Access with Key B */
-        0
-    },
-    /* 1  1  0         never never  keyA|B never never never */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC,
-        /* Access with Key B */
-        ACC_TRAILOR_READ_ACC
-    },
-    /* 0  0  1         never key A  key A  key A key A key A  Key B may be read,transport configuration[1] */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_WRITE_KEYA | ACC_TRAILOR_READ_ACC | ACC_TRAILOR_WRITE_ACC | ACC_TRAILOR_READ_KEYB | ACC_TRAILOR_WRITE_KEYB,
-        /* Access with Key B */
-        0
-    },
-    /* 0  1  1         never key B  keyA|B key B never key B */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC,
-        /* Access with Key B */
-        ACC_TRAILOR_WRITE_KEYA | ACC_TRAILOR_READ_ACC | ACC_TRAILOR_WRITE_ACC | ACC_TRAILOR_WRITE_KEYB
-    },
-    /* 1  0  1         never never  keyA|B key B never never */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC,
-        /* Access with Key B */
-        ACC_TRAILOR_READ_ACC | ACC_TRAILOR_WRITE_ACC
-    },
-    /* 1  1  1         never never  keyA|B never never never */
-    {
-        /* Access with Key A */
-        ACC_TRAILOR_READ_ACC,
-        /* Access with Key B */
-        ACC_TRAILOR_READ_ACC
-    },
-};
 
 static enum {
     STATE_HALT,
@@ -371,6 +249,21 @@ INLINE void ValueToBlock(uint8_t* Block, uint32_t Value)
     Block[9] = Block[1];
     Block[10] = Block[2];
     Block[11] = Block[3];
+}
+void FM11RF005SHAppInit(void)
+{
+    State = STATE_IDLE;
+    CardATQAValue = 0x0003;//rf005sh
+    CardSAKValue = 0x0a;//rf005sh
+    FromHalt = false;
+}
+
+void JCOPAppInit(void)
+{
+    State = STATE_IDLE;
+    CardATQAValue = 0x0004;//JCOP
+    CardSAKValue = 0x28;//JCOP
+    FromHalt = false;
 }
 
 void MifareClassicAppInit1K(void)
@@ -883,6 +776,213 @@ uint16_t MifareClassicAppProcess(uint8_t* Buffer, uint16_t BitCount)
         break;
     }
 
+    /* No response has been sent, when we reach here */
+    return ISO14443A_APP_NO_RESPONSE;
+}
+//APDU NOT IMPLEMENTED
+uint16_t JCOPAppProcess(uint8_t* Buffer, uint16_t BitCount)
+{
+    switch(State) {
+        case STATE_IDLE:
+        case STATE_HALT:
+            FromHalt = State == STATE_HALT;
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = STATE_READY1;
+                return BitCount;
+            }
+            break;
+            
+        case STATE_READY1:
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = FromHalt ? STATE_HALT : STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            } else if (Buffer[0] == ISO14443A_CMD_SELECT_CL1) {
+                uint8_t UidCL1[ISO14443A_CL_UID_SIZE];
+                MemoryReadBlock(UidCL1, MEM_UID_CL1_ADDRESS, MEM_UID_CL1_SIZE);
+                if (ISO14443ASelect(Buffer, &BitCount, UidCL1, CardSAKValue)) {
+                    AccessAddress = 0xff; /* invalid, force reload */
+                    State = STATE_ACTIVE;
+                }
+                return BitCount;
+            } else {
+                /* Unknown command. Enter HALT state. */
+                State = STATE_HALT;
+            }
+            
+        case STATE_ACTIVE:
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = FromHalt ? STATE_HALT : STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            } else if (Buffer[0] == CMD_HALT) {
+                /* Halts the tag. According to the ISO14443, the second
+                 * byte is supposed to be 0. */
+                if (Buffer[1] == 0) {
+                    if (ISO14443ACheckCRCA(Buffer, CMD_HALT_FRAME_SIZE)) {
+                        /* According to ISO14443, we must not send anything
+                         * in order to acknowledge the HALT command. */
+                        State = STATE_HALT;
+                        return ISO14443A_APP_NO_RESPONSE;
+                    } else {
+                        Buffer[0] = NAK_CRC_ERROR;
+                        return ACK_NAK_FRAME_SIZE;
+                    }
+                } else {
+                    Buffer[0] = NAK_INVALID_ARG;
+                    return ACK_NAK_FRAME_SIZE;
+                }
+            }
+            else if (Buffer[0] == 0xe0) {
+                Buffer[0] = 0x04; Buffer[1]=0x58;  Buffer[2] = 0x80; Buffer[3] = 0x02; Buffer[4] = 0x00; Buffer[5] = 0x00;
+                return 6;
+            }
+            else {
+                /* Unknown command. Enter HALT state. */
+                State = STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            }
+            break;
+            
+        case STATE_AUTHING:
+        case STATE_DECREMENT:
+        case STATE_INCREMENT:
+        case STATE_RESTORE:
+            break;
+        default:
+            /* Unknown state? Should never happen. */
+            break;
+    }
+    
+    /* No response has been sent, when we reach here */
+    return ISO14443A_APP_NO_RESPONSE;
+}
+uint16_t FM11RF005SHAppProcess(uint8_t* Buffer, uint16_t BitCount)
+{
+    switch(State) {
+        case STATE_IDLE:
+        case STATE_HALT:
+            FromHalt = State == STATE_HALT;
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = STATE_READY1;
+                return BitCount;
+            }
+            break;
+            
+        case STATE_READY1:
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = FromHalt ? STATE_HALT : STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            } else if (Buffer[0] == ISO14443A_CMD_SELECT_CL1) {
+                uint8_t UidCL1[ISO14443A_CL_UID_SIZE];
+                MemoryReadBlock(UidCL1, MEM_UID_CL1_ADDRESS, MEM_UID_CL1_SIZE);
+                if (ISO14443ASelect(Buffer, &BitCount, UidCL1, CardSAKValue)) {
+                    AccessAddress = 0xff; /* invalid, force reload */
+                    State = STATE_ACTIVE;
+                }
+                return BitCount;
+            } else {
+                /* Unknown command. Enter HALT state. */
+                State = STATE_HALT;
+            }
+            
+        case STATE_ACTIVE:
+            if (ISO14443AWakeUp(Buffer, &BitCount, CardATQAValue, FromHalt)) {
+                State = FromHalt ? STATE_HALT : STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            } else if (Buffer[0] == CMD_HALT) {
+                /* Halts the tag. According to the ISO14443, the second
+                 * byte is supposed to be 0. */
+                if (Buffer[1] == 0) {
+                    if (ISO14443ACheckCRCA(Buffer, CMD_HALT_FRAME_SIZE)) {
+                        /* According to ISO14443, we must not send anything
+                         * in order to acknowledge the HALT command. */
+                        State = STATE_HALT;
+                        return ISO14443A_APP_NO_RESPONSE;
+                    } else {
+                        Buffer[0] = NAK_CRC_ERROR;
+                        return ACK_NAK_FRAME_SIZE;
+                    }
+                } else {
+                    Buffer[0] = NAK_INVALID_ARG;
+                    return ACK_NAK_FRAME_SIZE;
+                }
+            } else if ((Buffer[0] == CMD_READ) && (Buffer[1] == 0x01)) {//READ UID
+                if (ISO14443ACheckCRCA(Buffer, CMD_READ_FRAME_SIZE)) {
+                    //READ UID
+                    MemoryReadBlock(Buffer, MEM_UID_CL1_ADDRESS, MEM_UID_CL1_SIZE);
+                    ISO14443AAppendCRCA(Buffer, MEM_UID_CL1_SIZE);
+                    return 48;
+                }
+            }
+            else if ((Buffer[0] == 0x60)) {//READ UID
+                if (ISO14443ACheckCRCA(Buffer, CMD_READ_FRAME_SIZE)) {
+                    //return 0 as random
+                    Buffer[0]=0x00;
+                    Buffer[1]=0x00;
+                    Buffer[2]=0x00;
+                    Buffer[3]=0x00;
+                    return 32;
+                }
+            }
+            else {
+                /* Unknown command. Enter HALT state. */
+                State = STATE_IDLE;
+                return ISO14443A_APP_NO_RESPONSE;
+            }
+            break;
+            
+        case STATE_AUTHING:
+        case STATE_DECREMENT:
+        case STATE_INCREMENT:
+        case STATE_RESTORE:
+            /* When we reach here, a decrement, increment or restore command has
+             * been issued earlier and the reader is now sending the data. First,
+             * decrypt the data and check CRC. Read data from the requested block
+             * address into the global block buffer and check for integrity. Then
+             * add or subtract according to issued command if necessary and store
+             * the block back into the global block buffer. */
+            
+            //Crypto1ByteArray(Buffer, MEM_VALUE_SIZE + ISO14443A_CRCA_SIZE);
+            if (ISO14443ACheckCRCA(Buffer, MEM_VALUE_SIZE )) {
+                MemoryReadBlock(BlockBuffer, (uint16_t) CurrentAddress * MEM_BYTES_PER_BLOCK, MEM_BYTES_PER_BLOCK);
+                
+                if (CheckValueIntegrity(BlockBuffer)) {
+                    uint32_t ParamValue;
+                    uint32_t BlockValue;
+                    
+                    ValueFromBlock(&ParamValue, Buffer);
+                    ValueFromBlock(&BlockValue, BlockBuffer);
+                    
+                    if (State == STATE_DECREMENT) {
+                        BlockValue -= ParamValue;
+                    } else if (State == STATE_INCREMENT) {
+                        BlockValue += ParamValue;
+                    } else if (State == STATE_RESTORE) {
+                        /* Do nothing */
+                    }
+                    ValueToBlock(BlockBuffer, BlockValue);
+                    
+                    State = STATE_AUTHED_IDLE;
+                    /* No ACK response on value commands part 2 */
+                    return ISO14443A_APP_NO_RESPONSE;
+                } else {
+                    /* Not sure if this is the correct error code.. */
+                    Buffer[0] = NAK_OTHER_ERROR ^ Crypto1Nibble();
+                }
+            } else {
+                /* CRC Error. */
+                Buffer[0] = NAK_CRC_ERROR ^ Crypto1Nibble();
+            }
+            
+            State = STATE_AUTHED_IDLE;
+            return ACK_NAK_FRAME_SIZE;
+            break;
+            
+            
+        default:
+            /* Unknown state? Should never happen. */
+            break;
+    }
+    
     /* No response has been sent, when we reach here */
     return ISO14443A_APP_NO_RESPONSE;
 }
